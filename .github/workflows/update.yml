@@ -25,13 +25,16 @@ jobs:
   update:
     runs-on: ubuntu-latest
     container: archlinux:base-devel
+    defaults:
+      run:
+        shell: bash
     env:
       ENDPOINT: https://screenpipe.com/api/app-update/stable/linux-x86_64/0.0.0
       AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
     steps:
       - name: Install tools
         run: |
-          pacman -Syu --noconfirm --needed git jq openssh
+          pacman -Syu --noconfirm --needed git jq openssh pacman-contrib
           useradd --create-home builder
 
       - uses: actions/checkout@v4
