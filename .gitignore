@@ -1,0 +1,6 @@
+*.deb
+*.md
+!README.md
+*.pkg.tar.*
+pkg/
+src/

@@ -1,0 +1,98 @@
+name: update
+
+# Daily: bump PKGBUILD to Screenpipe's latest stable Linux release, test-build
+# it, and commit. Once the AUR_SSH_PRIVATE_KEY secret exists, every bump (or a
+# manual run with publish_aur) is pushed to the AUR as well.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      publish_aur:
+        description: "Push the current PKGBUILD to the AUR even without a version bump"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    env:
+      ENDPOINT: https://screenpipe.com/api/app-update/stable/linux-x86_64/0.0.0
+      AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+    steps:
+      - name: Install tools
+        run: |
+          pacman -Syu --noconfirm --needed git jq openssh
+          useradd --create-home builder
+
+      - uses: actions/checkout@v4
+
+      - name: Check for a new release
+        id: version
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          latest=$(curl --fail --silent --show-error --location "$ENDPOINT" | jq -r .version)
+          current=$(. ./PKGBUILD && echo "$pkgver")
+          [[ "$latest" =~ ^[0-9]+(\.[0-9]+)+$ ]] || { echo "unexpected version: $latest"; exit 1; }
+          echo "current=$current latest=$latest"
+          if [ "$(vercmp "$latest" "$current")" -gt 0 ]; then
+            echo "bump=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Bump PKGBUILD
+        if: steps.version.outputs.bump == 'true'
+        run: |
+          sed -i -e "s/^pkgver=.*/pkgver=${{ steps.version.outputs.latest }}/" -e "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+
+      - name: Checksums, .SRCINFO and test build
+        if: steps.version.outputs.bump == 'true' || inputs.publish_aur
+        run: |
+          chown -R builder "$GITHUB_WORKSPACE"
+          su builder -c "cd '$GITHUB_WORKSPACE' && updpkgsums && makepkg --printsrcinfo > .SRCINFO && makepkg --force --nodeps --noconfirm"
+          pkgver=$(. ./PKGBUILD && echo "$pkgver")
+          deb_version=$(bsdtar -xOf "screenpipe-${pkgver}.deb" control.tar.gz | bsdtar -xOf - ./control | sed -n 's/^Version: //p')
+          [ "$deb_version" = "$pkgver" ] || { echo "deb reports $deb_version, expected $pkgver"; exit 1; }
+          test -x pkg/screenpipe-desktop-bin/opt/screenpipe-desktop/usr/bin/screenpipe-app
+          test -x pkg/screenpipe-desktop-bin/opt/screenpipe-desktop/usr/bin/bun
+
+      - name: Commit bump
+        if: steps.version.outputs.bump == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to ${{ steps.version.outputs.latest }}"
+          git push
+
+      - name: Publish to the AUR
+        if: env.AUR_SSH_PRIVATE_KEY != '' && (steps.version.outputs.bump == 'true' || inputs.publish_aur)
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          # Pinned to the fingerprint published on aur.archlinux.org.
+          ssh-keyscan -t ed25519 aur.archlinux.org > /tmp/aur-host-key
+          ssh-keygen -lf /tmp/aur-host-key | grep -q 'SHA256:RFzBCUItH9LZS0cKB5UE6ceAYhBD5C8GeOBip8Z11+4' || { echo "AUR host key mismatch"; exit 1; }
+          cat /tmp/aur-host-key >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o IdentitiesOnly=yes"
+          git clone ssh://aur@aur.archlinux.org/screenpipe-desktop-bin.git aur
+          cp PKGBUILD .SRCINFO aur/
+          cd aur
+          git config user.name "Ramiro Rivera"
+          git config user.email "ramarivera@gmail.com"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then echo "AUR already current"; exit 0; fi
+          git commit -m "Update to $(. ./PKGBUILD && echo "$pkgver-$pkgrel")"
+          git push origin HEAD:master
