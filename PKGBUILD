@@ -8,7 +8,7 @@
 
 pkgname=screenpipe-desktop-bin
 _pkgname=screenpipe
-pkgver=2.7.130
+pkgver=2.7.138
 pkgrel=1
 pkgdesc="Screenpipe desktop app: local 24/7 screen and audio memory for AI agents (official binary)"
 arch=('x86_64')
@@ -46,7 +46,7 @@ source=(
   "LICENSE-${pkgver}.md::https://raw.githubusercontent.com/screenpipe/screenpipe/app-v${pkgver}/LICENSE.md"
 )
 noextract=("${_pkgname}-${pkgver}.deb")
-sha256sums=('274a38989bafaedc09ab9409bd54d2028538986b5f39d7d1fc621bf272d55da3'
+sha256sums=('c76800e7b9c0efef2b86ea75ee2f37534cd7fe66102f66741600f41498cbe181'
             '17e39cd5eb995ea4b41afc66d1e8b5ee7f4c7a67383dc24b2ddecca33230d5c7')
 
 prepare() {
