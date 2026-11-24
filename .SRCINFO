@@ -1,6 +1,6 @@
 pkgbase = screenpipe-desktop-bin
 	pkgdesc = Screenpipe desktop app: local 24/7 screen and audio memory for AI agents (official binary)
-	pkgver = 2.7.145
+	pkgver = 2.7.153
 	pkgrel = 1
 	url = https://screenpi.pe
 	arch = x86_64
@@ -29,12 +29,12 @@ pkgbase = screenpipe-desktop-bin
 	depends = xz
 	provides = screenpipe-desktop
 	conflicts = screenpipe-desktop
-	noextract = screenpipe-2.7.145.deb
+	noextract = screenpipe-2.7.153.deb
 	options = !strip
 	options = !debug
-	source = screenpipe-2.7.145.deb::https://screenpi.pe/api/app-update/download/stable/2.7.145/x86_64-unknown-linux-gnu/screenpipe_2.7.145_amd64.deb
-	source = LICENSE-2.7.145.md::https://raw.githubusercontent.com/screenpipe/screenpipe/app-v2.7.145/LICENSE.md
-	sha256sums = 3638c1eb0d0dd5bfe3911b8eb916ef62012181a3eb628a34c64f5d26b004f01c
+	source = screenpipe-2.7.153.deb::https://screenpi.pe/api/app-update/download/stable/2.7.153/x86_64-unknown-linux-gnu/screenpipe_2.7.153_amd64.deb
+	source = LICENSE-2.7.153.md::https://raw.githubusercontent.com/screenpipe/screenpipe/app-v2.7.153/LICENSE.md
+	sha256sums = 5b27590b8e8401cd0f4afc8a749b786b23386bdf3a170782998e073861aa3943
 	sha256sums = 17e39cd5eb995ea4b41afc66d1e8b5ee7f4c7a67383dc24b2ddecca33230d5c7
 
 pkgname = screenpipe-desktop-bin
